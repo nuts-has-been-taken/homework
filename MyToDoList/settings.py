@@ -1,5 +1,6 @@
 from pathlib import Path
 from mongoengine import connect
+from config import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 APPEND_SLASH=False
@@ -8,7 +9,7 @@ SECRET_KEY = 'q*@4u^=h*1ag4t8ck4ip@#-xq8)hf-nfjn*^vz5me1tbk6od&h'
 
 DEBUG = True
 
-connect("homework" , host="mongodb+srv://sam891206:891206sam@cluster0.cckje.gcp.mongodb.net")
+connect("homework" , host=config['MONGODB_CONNECT_STRING'])
 
 ALLOWED_HOSTS = []
 
