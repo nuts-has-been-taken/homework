@@ -20,18 +20,22 @@ def all_orders(request):
             return JsonResponse(order_serializer.data,status=status.HTTP_201_CREATED)
 
     if request.method == 'DELETE':
-        count = order.objects.all().delete()
+        count = Order.objects.all().delete()
         return JsonResponse(
             {'message': '{} Orders were deleted successfully!'.format(count)},status=status.HTTP_204_NO_CONTENT)
     
     return JsonResponse(order_serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     
         
-@api_view(['GET'])
+@api_view(['GET','DELETE'])
 def id_order(request,order_id):
     try:
         number = Order.objects.get(id=order_id)
     except Order.DoesNotExist:
-        return JsonResponse({'message': 'The order does not exist'},status=status.HTTP_404_NOT_FOUND)     
-    order_serializer = OrderSerializer(number)
-    return JsonResponse(order_serializer.data)
+        return JsonResponse({'message': 'The order does not exist'},status=status.HTTP_404_NOT_FOUND)
+    if request.method == 'GET':     
+        order_serializer = OrderSerializer(number)
+        return JsonResponse(order_serializer.data)
+    if request.method == 'DELETE':
+        number.delete()
+        return JsonResponse({'message': 'The order was deleted successfully!'},status=status.HTTP_204_NO_CONTENT)
