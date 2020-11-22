@@ -81,6 +81,42 @@ def id_order(request,number_id):
         order_number.delete()
         return JsonResponse({'message': 'The order was deleted successfully!'},status=status.HTTP_204_NO_CONTENT)
 
+@api_view(['POST'])
+def update_data(request,number_id):
+    text = JSONParser().parse(request)
+    try:
+        order_number = Order.objects.get(id=text['order_id'])
+    except Order.DoesNotExist:
+        return JsonResponse({'message': 'The order does not exist'},status=status.HTTP_404_NOT_FOUND)
+    except ValidationError:
+        return JsonResponse({'message': 'The type of id is not correct'},status=status.HTTP_400_BAD_REQUEST)
+    #司機認領訂單
+    try:
+        delivery_number = Delivery.objects.get(id=number_id)
+    except Delivery.DoesNotExist:
+        return JsonResponse({'message': 'The Delivery does not exist'},status=status.HTTP_404_NOT_FOUND)
+    except ValidationError:
+        return JsonResponse({'message': 'The type of id is not correct'},status=status.HTTP_400_BAD_REQUEST)
+    delivery_number.orders.append(text['order_id'])
+    update_data = {
+        "_id":delivery_number.id,
+        "species":delivery_number.species,
+        "name":delivery_number.name,
+        "gender":delivery_number.gender,
+        "phone_number":delivery_number.phone_number,
+        "email":delivery_number.email,
+        "password":delivery_number.password,
+        "identity":delivery_number.identity,
+        "car_number":delivery_number.car_number,
+        "licence":delivery_number.licence,
+        "orders":delivery_number.orders
+    }
+    delivery_serializer = DeliverySerializer(delivery_number,data=update_data)
+    if delivery_serializer.is_valid():
+        print('saving....')
+        delivery_serializer.save()
+        return JsonResponse({"message":"adopt sucessfully"},status=status.HTTP_201_CREATED)
+    return JsonResponse(delivery_serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 def get_location(request,order_id):
@@ -99,6 +135,7 @@ def get_location(request,order_id):
         return JsonResponse({'message': 'Your order is here'})
     else :
         return JsonResponse({'message': 'Your order is far from '+ str(far) +' meter'})
+
 @api_view(['PUT'])
 def delivery_update_loc(request,order_id):
     try:
