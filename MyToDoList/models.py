@@ -8,8 +8,8 @@ class Order(Document):
     address = StringField(required=True)
     status = StringField(default="收到訂單")
     lat = ListField(default=[random.randint(0,200),random.randint(0,200)])
-    driver = StringField(default=None)
-    driver_lat = StringField(default=None)
+    driver = StringField(default= '')
+    driver_lat = ListField(default=[])
 class Customer(Document):
     species = StringField(required=True)
     name = StringField(required=True)

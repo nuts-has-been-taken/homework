@@ -5,6 +5,7 @@ from rest_framework.parsers import JSONParser
 from order_api.serializers import OrderSerializer,CustomerSerializer,DeliverySerializer
 from MyToDoList.models import Order,Customer,Delivery
 from mongoengine.errors import ValidationError
+import random
 import math
 import requests
 
@@ -48,22 +49,9 @@ def id_order(request,number_id):
             except ValidationError:
                 return JsonResponse({'message': 'The type of id is not correct'},status=status.HTTP_400_BAD_REQUEST)
             order_serializer.save()
-            customer_number.orders.append(str(order_serializer["id"]))
-            update_data = {
-                "_id":customer_number.id,
-                "species":customer_number.species,
-                "name":customer_number.name,
-                "gender":customer_number.gender,
-                "phone_number":customer_number.phone_number,
-                "email":customer_number.email,
-                "password":customer_number.password,
-                "orders":customer_number.orders
-            }
-            customer_serializer = CustomerSerializer(customer_number,data=update_data)
-            if customer_serializer.is_valid():
-                print('saving....')
-                customer_serializer.save()
-            return JsonResponse(order_serializer.data,status=status.HTTP_201_CREATED)
+            customer_number.orders.append(order_serializer.data["id"])
+            customer_number.save()
+            return JsonResponse(order_serializer.data,status=status.HTTP_202_ACCEPTED)
         return JsonResponse(order_serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     #GET DEL為查詢 刪除訂單，此時number_id為訂單的id
     try:
@@ -85,39 +73,38 @@ def id_order(request,number_id):
 def update_data(request,number_id):
     text = JSONParser().parse(request)
     try:
-        order_number = Order.objects.get(id=text['order_id'])
+        order_number = Order.objects.get(id=number_id)
     except Order.DoesNotExist:
         return JsonResponse({'message': 'The order does not exist'},status=status.HTTP_404_NOT_FOUND)
     except ValidationError:
         return JsonResponse({'message': 'The type of id is not correct'},status=status.HTTP_400_BAD_REQUEST)
     #司機認領訂單
-    try:
-        delivery_number = Delivery.objects.get(id=number_id)
-    except Delivery.DoesNotExist:
-        return JsonResponse({'message': 'The Delivery does not exist'},status=status.HTTP_404_NOT_FOUND)
-    except ValidationError:
-        return JsonResponse({'message': 'The type of id is not correct'},status=status.HTTP_400_BAD_REQUEST)
-    delivery_number.orders.append(text['order_id'])
-    update_data = {
-        "_id":delivery_number.id,
-        "species":delivery_number.species,
-        "name":delivery_number.name,
-        "gender":delivery_number.gender,
-        "phone_number":delivery_number.phone_number,
-        "email":delivery_number.email,
-        "password":delivery_number.password,
-        "identity":delivery_number.identity,
-        "car_number":delivery_number.car_number,
-        "licence":delivery_number.licence,
-        "orders":delivery_number.orders
-    }
-    delivery_serializer = DeliverySerializer(delivery_number,data=update_data)
-    if delivery_serializer.is_valid():
-        print('saving....')
-        delivery_serializer.save()
+    if text['method'] == 'adopt':
+        try:
+            delivery_number = Delivery.objects.get(id=text['delivery_id'])
+        except Delivery.DoesNotExist:
+            return JsonResponse({'message': 'The Delivery does not exist'},status=status.HTTP_404_NOT_FOUND)
+        except ValidationError:
+            return JsonResponse({'message': 'The type of id is not correct'},status=status.HTTP_400_BAD_REQUEST)
+        delivery_number.orders.append(text['order_id'])
+        delivery_number.save()
+        order_number.status = "認領的啦"
+        order_number.driver = str(delivery_number.id)
+        order_number.driver_lat = [random.randint(0,200),random.randint(0,200)]
+        order_number.save()
         return JsonResponse({"message":"adopt sucessfully"},status=status.HTTP_201_CREATED)
-    return JsonResponse(delivery_serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-
+    elif text['method'] == 'update_lat':
+        order_number.driver_lat = text['driver_lat']
+        order_number.save()
+        a = order_number.driver_lat
+        x,y = a[0],a[1]
+        b = order_number.lat
+        nx,ny = b[0],b[1]
+        far = math.sqrt((x-nx)**2 + (y-ny)**2)
+        if  far <= 5 :
+            return JsonResponse({'message': 'You are arrived'})
+        else :
+            return JsonResponse({'message': 'Far from '+ str(far) +' meter'})
 @api_view(['GET'])
 def get_location(request,order_id):
     try:
