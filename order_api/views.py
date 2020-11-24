@@ -37,7 +37,7 @@ def all_orders(request):
 
 @api_view(['GET','POST','DELETE'])
 def id_order(request,number_id):
-    #新增訂單的同時，將order的訂單id加入顧客名下，此時number_id為顧客的id
+    #新增訂單的同時，將order的訂單id加入顧客名下，number_id是顧客的id
     if request.method == 'POST':
         the_order = JSONParser().parse(request)
         order_serializer = OrderSerializer(data=the_order)
@@ -62,8 +62,11 @@ def id_order(request,number_id):
         return JsonResponse({'message': 'The type of id is not correct'},status=status.HTTP_400_BAD_REQUEST)
     
     if request.method == 'GET': 
-        order_serializer = OrderSerializer(order_number)
-        return JsonResponse(order_serializer.data)
+        if order_number.status == "收到訂單":
+            order_serializer = OrderSerializer(order_number)
+            return JsonResponse(order_serializer.data)
+        elif order_number.status == "認領的啦":
+            return JsonResponse({"message":"司機已領取你的餐點"},status=status.HTTP_201_CREATED)
     
     if request.method == 'DELETE':
         order_number.delete()
@@ -86,7 +89,7 @@ def update_data(request,number_id):
             return JsonResponse({'message': 'The Delivery does not exist'},status=status.HTTP_404_NOT_FOUND)
         except ValidationError:
             return JsonResponse({'message': 'The type of id is not correct'},status=status.HTTP_400_BAD_REQUEST)
-        delivery_number.orders.append(text['order_id'])
+        delivery_number.orders.append(number_id)
         delivery_number.save()
         order_number.status = "認領的啦"
         order_number.driver = str(delivery_number.id)
